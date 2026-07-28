@@ -1,0 +1,946 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fundify - Professional Portal</title>
+    <style>
+        /* =========================================
+           1. CSS VARIABLES (THEMING) & RESET
+           ========================================= */
+        :root {
+            /* Light Theme Defaults */
+            --sea-blue: #006994;
+            --deep-sea: #004b6e;
+            --accent-blue: #4db8ff;
+            --white: #ffffff;
+            --bg-light: #f4f7f9;
+            --text-main: #1a2935;
+            --text-muted: #6c7a86;
+            --border-light: #e0e6ed;
+            --success: #28a745;
+            --danger: #dc3545;
+            --shadow-sm: 0 4px 6px rgba(0,0,0,0.05);
+            --shadow-md: 0 10px 20px rgba(0,0,0,0.08);
+            --radius-md: 16px;
+            --transition: all 0.3s ease;
+            --chat-bot-bg: #f1f3f5;
+            --topic-bg: #f8f9fa;
+        }
+
+        /* Dark Theme Overrides */
+        body.dark-mode {
+            --white: #1e293b;
+            --bg-light: #0f172a;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border-light: #334155;
+            --shadow-sm: 0 4px 6px rgba(0,0,0,0.3);
+            --shadow-md: 0 10px 20px rgba(0,0,0,0.4);
+            --chat-bot-bg: #334155;
+            --topic-bg: #1e293b;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; -webkit-tap-highlight-color: transparent; }
+        body { background: var(--bg-light); color: var(--text-main); overflow-x: hidden; transition: background-color 0.3s, color 0.3s; }
+        button { cursor: pointer; border: none; background: none; outline: none; color: inherit; }
+        input { outline: none; color: var(--text-main); }
+
+        /* =========================================
+           2. SPLIT LOGIN PAGE WITH LIVE BACKGROUND
+           ========================================= */
+        #login-view { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; 
+            display: flex; align-items: center; justify-content: center; 
+            background: linear-gradient(135deg, var(--deep-sea), var(--sea-blue)); 
+            transition: opacity 0.5s ease; overflow: hidden; padding: 20px;
+        }
+
+        .symbol-bg { position: absolute; color: rgba(255, 255, 255, 0.15); font-weight: bold; pointer-events: none; animation: floatUp linear infinite; bottom: -100px; }
+        @keyframes floatUp { 0% { transform: translateY(0) rotate(0deg); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { transform: translateY(-120vh) rotate(360deg); opacity: 0; } }
+
+        /* Unified Login Box Layout */
+        .login-wrapper {
+            display: flex; flex-direction: column; width: 100%; max-width: 900px; 
+            background: var(--white); border-radius: 24px; overflow: hidden; 
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3); z-index: 10;
+        }
+        @media (min-width: 768px) { .login-wrapper { flex-direction: row; height: 500px; } }
+
+        .login-left {
+            flex: 1; display: flex; align-items: center; justify-content: center; 
+            background: #ffffff;
+            padding: 30px; border-bottom: 1px solid var(--border-light);
+            min-height: 250px;
+        }
+        @media (min-width: 768px) { .login-left { border-bottom: none; border-right: 1px solid var(--border-light); padding: 40px; } }
+        
+        .login-left img { max-width: 100%; max-height: 100%; object-fit: contain; }
+
+        .login-right {
+            flex: 1; padding: 40px 30px; display: flex; flex-direction: column; 
+            justify-content: center; background: var(--bg-light); text-align: center;
+        }
+        
+        .login-right h2 { color: var(--sea-blue); margin-bottom: 5px; font-size: 28px; font-weight: 800; }
+        .login-right p { color: var(--text-muted); margin-bottom: 25px; font-size: 14px; }
+        
+        .input-group { margin-bottom: 15px; }
+        .input-group input { width: 100%; padding: 15px; border: 1px solid var(--border-light); border-radius: 12px; background: var(--white); font-size: 15px; transition: var(--transition); }
+        .input-group input:focus { border-color: var(--sea-blue); box-shadow: 0 0 0 3px rgba(0, 105, 148, 0.1); }
+        .btn-login { width: 100%; padding: 16px; background: var(--sea-blue); color: #fff; font-weight: bold; border-radius: 12px; font-size: 16px; margin-top: 10px; transition: var(--transition); }
+        .btn-login:hover { background: var(--deep-sea); transform: translateY(-2px); }
+        .error-msg { color: var(--danger); font-size: 13px; margin-bottom: 10px; display: none; }
+
+        /* =========================================
+           3. RESPONSIVE DASHBOARD LAYOUT
+           ========================================= */
+        #dashboard-view { display: none; max-width: 1200px; margin: 0 auto; min-height: 100vh; position: relative; }
+        
+        .header { background: var(--white); padding: 15px 20px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 50; box-shadow: var(--shadow-sm); }
+        .profile { display: flex; align-items: center; gap: 12px; }
+        .avatar { width: 45px; height: 45px; background: var(--light-blue); color: var(--sea-blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; border: 2px solid var(--sea-blue); }
+        .search-bar { flex-grow: 1; margin: 0 20px; max-width: 500px; display: none; }
+        @media (min-width: 768px) { .search-bar { display: block; } }
+        .search-bar input { width: 100%; padding: 12px 20px; border-radius: 20px; border: 1px solid var(--border-light); background: var(--bg-light); font-size: 14px; }
+        
+        .header-actions { display: flex; align-items: center; gap: 15px; }
+        .theme-toggle-btn { font-size: 20px; cursor: pointer; padding: 5px; border-radius: 50%; background: var(--bg-light); transition: var(--transition); }
+        .theme-toggle-btn:hover { background: var(--border-light); }
+        .logout-btn { color: var(--danger); font-weight: bold; padding: 10px; }
+
+        .cards-container { display: grid; grid-template-columns: 1fr; gap: 15px; padding: 20px; }
+        @media (min-width: 768px) { .cards-container { grid-template-columns: 1fr 1fr; } }
+
+        .bank-card { background: linear-gradient(135deg, var(--deep-sea), var(--sea-blue)); border-radius: var(--radius-md); padding: 25px; color: #fff; box-shadow: var(--shadow-md); position: relative; overflow: hidden; }
+        .bank-card.credit { background: linear-gradient(135deg, #3f2b96, #a8c0ff); }
+        .bank-card::after { content: ''; position: absolute; right: -30px; top: -30px; width: 150px; height: 150px; border-radius: 50%; background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%); }
+        .card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; opacity: 0.9; }
+        .card-amount-row { display: flex; align-items: center; justify-content: space-between; }
+        .balance-amt { font-size: 32px; font-weight: 800; }
+        .eye-btn { fill: #fff; width: 24px; cursor: pointer; transition: var(--transition); }
+        .eye-btn:hover { transform: scale(1.1); }
+
+        .tabs { display: flex; background: var(--white); overflow-x: auto; scrollbar-width: none; border-bottom: 1px solid var(--border-light); padding: 0 10px; }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tab-btn { padding: 15px 20px; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; white-space: nowrap; transition: var(--transition); font-size: 15px; }
+        .tab-btn.active { color: var(--sea-blue); border-bottom-color: var(--sea-blue); }
+        
+        .tab-content { display: none; padding: 20px; animation: fadeIn 0.4s; min-height: 60vh; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* =========================================
+           4. BANKING TAB & NEW BILLS SECTION
+           ========================================= */
+        .section-title { font-size: 18px; font-weight: 700; margin-bottom: 15px; color: var(--text-main); }
+        .grid-services { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; background: var(--white); padding: 20px; border-radius: var(--radius-md); margin-bottom: 25px; box-shadow: var(--shadow-sm); }
+        @media (min-width: 768px) { .grid-services { grid-template-columns: repeat(8, 1fr); } }
+        
+        .service { display: flex; flex-direction: column; align-items: center; text-align: center; cursor: pointer; transition: var(--transition); }
+        .service:hover { transform: translateY(-3px); }
+        .s-icon { width: 55px; height: 55px; background: var(--bg-light); border-radius: 14px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; color: var(--sea-blue); font-size: 24px; transition: var(--transition); }
+        .service:hover .s-icon { background: var(--sea-blue); color: #fff; }
+        .s-name { font-size: 12px; font-weight: 600; color: var(--text-main); }
+
+        .tx-list { background: var(--white); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); overflow: hidden; }
+        .tx-item { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; border-bottom: 1px solid var(--border-light); }
+        .tx-item:last-child { border-bottom: none; }
+        .tx-left { display: flex; flex-direction: column; }
+        .tx-name { font-weight: 600; font-size: 15px; color: var(--text-main); }
+        .tx-date { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+        .tx-amt { font-weight: bold; font-size: 16px; color: var(--text-main); }
+
+        /* =========================================
+           5. LOANS TAB (EDITABLE)
+           ========================================= */
+        .loan-summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 25px; }
+        .loan-summary-box { background: var(--white); padding: 20px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+        
+        .editable-amt { font-size: 22px; font-weight: 800; color: var(--text-main); margin-bottom: 10px; outline: none; border-bottom: 1px dashed var(--sea-blue); cursor: text; display: inline-block; }
+        .editable-amt:focus { background-color: var(--bg-light); padding: 0 5px; border-radius: 4px; }
+        .edit-hint { font-size: 10px; color: var(--text-muted); margin-top: 10px; font-style: italic; }
+        .loan-sub-label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+        .loan-sub-val { font-size: 16px; font-weight: 700; color: var(--text-main); }
+
+        .calc-box { background: var(--white); padding: 25px; border-radius: var(--radius-md); box-shadow: var(--shadow-sm); }
+        .calc-input-group { margin-bottom: 20px; }
+        .calc-input-group label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 8px; }
+        .calc-input-group input { width: 100%; padding: 15px; border: 1px solid var(--border-light); border-radius: 10px; font-size: 16px; font-weight: 600; background: var(--bg-light); }
+        .btn-calc { width: 100%; padding: 16px; background: #3b5998; color: #fff; font-size: 16px; font-weight: bold; border-radius: 10px; margin-bottom: 20px; }
+        
+        .calc-result-grid { display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--border-light); padding-top: 20px; }
+        .calc-result-box .label { font-size: 12px; color: var(--text-muted); margin-bottom: 5px; }
+        .calc-result-box .value { font-size: 18px; font-weight: 800; color: var(--text-main); }
+
+        @media (min-width: 768px) {
+            .loans-desktop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+            .loan-summary-grid { grid-template-columns: 1fr 1fr; }
+        }
+
+        /* =========================================
+           6. FAQ TAB (AI Chat & TOPICS)
+           ========================================= */
+        .btn-topics-open { width: 100%; padding: 16px; background: var(--bg-light); border: 1px solid var(--border-light); color: var(--sea-blue); font-weight: bold; font-size: 15px; border-radius: var(--radius-md); margin-bottom: 15px; cursor: pointer; transition: var(--transition); display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .btn-topics-open:hover { background: var(--border-light); }
+
+        .chat-wrapper { background: var(--white); border-radius: var(--radius-md); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; height: 550px; max-height: 65vh; margin: 0 auto; }
+        .chat-history { flex-grow: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .msg-row { display: flex; gap: 10px; max-width: 85%; }
+        .msg-row.bot { align-self: flex-start; }
+        .msg-row.user { align-self: flex-end; flex-direction: row-reverse; }
+        .bot-avatar { width: 35px; height: 35px; background: var(--bg-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+        .msg-bubble { padding: 15px; border-radius: 16px; font-size: 15px; line-height: 1.4; }
+        .bot .msg-bubble { background: var(--chat-bot-bg); color: var(--text-main); border-top-left-radius: 4px; }
+        .user .msg-bubble { background: #3b5998; color: #fff; border-top-right-radius: 4px; }
+        .chat-controls { padding: 15px 20px; border-top: 1px solid var(--border-light); background: var(--white); border-radius: 0 0 var(--radius-md) var(--radius-md); }
+        .chat-input-area { display: flex; gap: 10px; align-items: center; }
+        .chat-input-area input { flex-grow: 1; padding: 15px 20px; border: 1px solid var(--border-light); border-radius: 25px; font-size: 15px; background: var(--bg-light); }
+        .btn-send { width: 45px; height: 45px; background: #3b5998; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: var(--transition); }
+
+        .topics-list { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+        .topic-item { background: var(--topic-bg); padding: 15px 20px; border-radius: 12px; font-weight: 600; cursor: pointer; transition: var(--transition); display: flex; align-items: center; gap: 12px; color: var(--text-main); border: 1px solid transparent; }
+        .topic-item:hover { background: var(--border-light); border-color: #ccc; }
+        .topic-item .hash { color: var(--sea-blue); font-weight: bold; font-size: 18px; }
+
+        /* =========================================
+           7. MODALS & TOASTS
+           ========================================= */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 100; display: none; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: var(--white); width: 90%; max-width: 400px; border-radius: var(--radius-md); padding: 25px; animation: scaleIn 0.3s forwards; position: relative; }
+        @keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-title { font-weight: bold; font-size: 18px; color: var(--text-main); width: 100%; text-align: center;}
+        .close-btn { font-size: 24px; color: var(--text-muted); position: absolute; right: 20px; top: 20px; }
+        
+        .form-input { width: 100%; padding: 14px; border: 1px solid var(--border-light); border-radius: 10px; margin-bottom: 15px; font-size: 15px; background: var(--bg-light); color: var(--text-main); }
+        
+        .pin-dots { display: flex; justify-content: center; gap: 15px; margin: 20px 0; }
+        .dot { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--text-muted); }
+        .dot.active { background: var(--sea-blue); border-color: var(--sea-blue); }
+        .numpad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; max-width: 300px; margin: 0 auto; }
+        .num-btn { padding: 15px; font-size: 22px; font-weight: bold; background: var(--bg-light); border-radius: 12px; color: var(--text-main);}
+
+        .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); background: var(--success); color: #fff; padding: 14px 28px; border-radius: 30px; font-weight: bold; z-index: 200; display: none; box-shadow: var(--shadow-md); }
+
+        /* =========================================
+           8. ABOUT TAB (UPDATED SCREENSHOT DESIGN)
+           ========================================= */
+        .about-container { padding: 10px 0; background: var(--bg-light); }
+        
+        .about-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 30px; padding: 0 5px;}
+        .about-logo h2 { font-size: 28px; font-weight: 900; color: var(--sea-blue); letter-spacing: 1px; }
+        .about-logo h2 span { color: var(--deep-sea); }
+        
+        .about-section { margin-bottom: 35px; padding: 0 5px; }
+        .about-section h3 { font-size: 18px; font-weight: 800; color: var(--text-main); margin-bottom: 15px; }
+        
+        .about-links { list-style: none; padding: 0; margin: 0; }
+        .about-links li { color: var(--text-muted); font-size: 16px; margin-bottom: 16px; cursor: pointer; transition: color 0.2s; display: inline-block; width: 100%;}
+        .about-links li:hover { color: var(--sea-blue); font-weight: 600; }
+        
+        .app-buttons { display: flex; gap: 15px; flex-wrap: wrap; }
+        .app-btn { display: flex; align-items: center; gap: 10px; padding: 12px 20px; border: 1px solid var(--border-light); border-radius: 25px; background: var(--white); color: var(--text-main); font-weight: 700; font-size: 14px; cursor: pointer; transition: background 0.2s; }
+        .app-btn:hover { background: var(--bg-light); border-color: var(--sea-blue); }
+        .app-btn svg { width: 16px; height: 16px; fill: currentColor; }
+        
+        .social-icons { display: flex; gap: 15px; }
+        .social-icon { width: 45px; height: 45px; border-radius: 50%; border: 1px solid var(--border-light); background: var(--white); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--text-muted); transition: all 0.2s; }
+        .social-icon:hover { border-color: var(--text-main); color: var(--text-main); transform: translateY(-3px); }
+        .social-icon.fb { background: #1877F2; border-color: #1877F2; color: white; }
+        .social-icon.fb:hover { opacity: 0.9; border-color: #1877F2; color: white; }
+        .social-icon svg { width: 18px; height: 18px; fill: currentColor; }
+    </style>
+</head>
+<body>
+
+    <!-- ================= LOGIN PAGE (Split Screen) ================= -->
+    <div id="login-view">
+        <div id="symbol-container"></div>
+        <div class="login-wrapper">
+            <!-- Left Side Image -->
+            <div class="login-left">
+                <!-- Frame extended to viewBox="0 0 500 600" to ensure badges fit! -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 600" style="max-width: 100%; max-height: 100%;">
+                    <defs>
+                        <linearGradient id="fundify-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#002b49;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#008ba3;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                    
+                    <!-- Big Stylized F -->
+                    <path d="M 140 100 C 280 100, 360 120, 380 160 L 320 160 C 300 140, 240 140, 200 140 L 200 200 L 280 200 L 280 240 L 200 240 L 200 320 C 200 390, 280 400, 340 350 L 360 380 C 260 450, 140 420, 140 320 Z" fill="url(#fundify-grad)"/>
+                    
+                    <!-- Bank Building Icon -->
+                    <g transform="translate(180, 180)">
+                        <polygon points="70,0 10,40 130,40" fill="#002b49"/>
+                        <rect x="15" y="45" width="110" height="8" fill="#002b49"/>
+                        <rect x="25" y="58" width="15" height="50" fill="#002b49"/>
+                        <rect x="62.5" y="58" width="15" height="50" fill="#002b49"/>
+                        <rect x="100" y="58" width="15" height="50" fill="#002b49"/>
+                        <rect x="10" y="113" width="120" height="12" fill="#002b49"/>
+                        <circle cx="70" cy="22" r="14" fill="none" stroke="white" stroke-width="2"/>
+                        <text x="70" y="28" font-family="Arial, sans-serif" font-size="18" fill="white" font-weight="bold" text-anchor="middle">₹</text>
+                    </g>
+                    
+                    <!-- FUNDIFY Text safely below the F -->
+                    <text x="250" y="490" font-family="Arial, sans-serif" font-size="52" font-weight="900" letter-spacing="6" text-anchor="middle">
+                        <tspan fill="#002b49">FUND</tspan><tspan fill="#008ba3">I</tspan><tspan fill="#002b49">FY</tspan>
+                    </text>
+
+                    <!-- Bottom Badges: SECURE | RELIABLE | TRUSTED -->
+                    <g transform="translate(50, 530)" font-family="Arial, sans-serif" font-size="13" font-weight="bold" fill="#002b49">
+                        
+                        <!-- SECURE -->
+                        <g transform="translate(0, 0)">
+                           <path d="M 20 0 L 10 5 L 10 15 C 10 25, 20 30, 20 30 C 20 30, 30 25, 30 15 L 30 5 Z" fill="none" stroke="#008ba3" stroke-width="2"/>
+                           <rect x="17" y="12" width="6" height="6" fill="#002b49"/>
+                           <circle cx="20" cy="10" r="3" fill="none" stroke="#002b49" stroke-width="2"/>
+                           <text x="40" y="20">SECURE</text>
+                        </g>
+
+                        <!-- Divider -->
+                        <line x1="125" y1="0" x2="125" y2="30" stroke="#008ba3" stroke-width="1"/>
+
+                        <!-- RELIABLE -->
+                        <g transform="translate(145, 0)">
+                           <circle cx="20" cy="15" r="12" fill="none" stroke="#008ba3" stroke-width="2"/>
+                           <path d="M 15 15 L 18 18 L 25 10" fill="none" stroke="#002b49" stroke-width="2"/>
+                           <text x="40" y="20">RELIABLE</text>
+                        </g>
+
+                        <!-- Divider -->
+                        <line x1="255" y1="0" x2="255" y2="30" stroke="#008ba3" stroke-width="1"/>
+
+                        <!-- TRUSTED -->
+                        <g transform="translate(275, 0)">
+                           <circle cx="15" cy="10" r="5" fill="#002b49"/>
+                           <circle cx="25" cy="10" r="5" fill="#002b49"/>
+                           <path d="M 10 25 C 10 18, 30 18, 30 25 Z" fill="#002b49"/>
+                           <circle cx="20" cy="15" r="8" fill="#008ba3"/>
+                           <path d="M 17 15 L 19 17 L 24 12" fill="none" stroke="white" stroke-width="2"/>
+                           <text x="40" y="20">TRUSTED</text>
+                        </g>
+                    </g>
+                </svg>
+            </div>
+            <!-- Right Side Login Details -->
+            <div class="login-right">
+                <h2>Fundify</h2>
+                <p>Professional Portal</p>
+                <div class="error-msg" id="login-error">Invalid Username or Password</div>
+                
+                <div class="input-group">
+                    <input type="text" id="username" placeholder="Username (admin)" autocomplete="off">
+                </div>
+                <div class="input-group">
+                    <input type="password" id="password" placeholder="Password (admin123)">
+                </div>
+                <button class="btn-login" onclick="processLogin()">Secure Login</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= DASHBOARD ================= -->
+    <div id="dashboard-view">
+        <div class="header">
+            <div class="profile">
+                <div class="avatar">U</div>
+                <div>
+                    <div style="font-weight: 800; font-size: 16px;">User Welcome!</div>
+                    <div style="font-size: 12px; color: var(--text-muted);">Manage your finances</div>
+                </div>
+            </div>
+            <div class="search-bar">
+                <input type="text" placeholder="Pay Using Net Banking">
+            </div>
+            <div class="header-actions">
+                <button id="theme-toggle" class="theme-toggle-btn" onclick="toggleTheme()">🌙</button>
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+        </div>
+
+        <!-- Balance Cards -->
+        <div class="cards-container">
+            <div class="bank-card">
+                <div class="card-top">
+                    <span>Savings Balance</span>
+                    <div style="display:flex; gap:10px;">
+                        <svg width="18" fill="white" viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46A7.93 7.93 0 0020 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25 1.97.7-2.8L5.24 7.74A7.93 7.93 0 004 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg>
+                        <svg width="18" fill="white" viewBox="0 0 24 24"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zm0-8v2h14V7H7z"/></svg>
+                    </div>
+                </div>
+                <div class="card-amount-row">
+                    <div class="balance-amt" id="balance-display">₹ XX,XXX.XX</div>
+                    <svg class="eye-btn" onclick="toggleBalance()" id="eye-icon" viewBox="0 0 24 24"><path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/></svg>
+                </div>
+            </div>
+            <div class="bank-card credit">
+                <div class="card-top">
+                    <span>Credit Card Outstanding Balance</span>
+                </div>
+                <div class="card-amount-row">
+                    <div class="balance-amt">₹ XX,XXX.XX</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabs Navigation -->
+        <div class="tabs">
+            <button class="tab-btn active" onclick="switchTab('banking')">Banking</button>
+            <button class="tab-btn" onclick="switchTab('loans')">Loans</button>
+            <button class="tab-btn" onclick="switchTab('faq')">FAQ</button>
+            <button class="tab-btn" onclick="switchTab('rewards')">Rewards</button>
+            <button class="tab-btn" onclick="switchTab('about')">About</button>
+        </div>
+
+        <!-- TAB 1: BANKING & BILLS -->
+        <div id="tab-banking" class="tab-content active">
+            
+            <div class="section-title">Fund Transfer</div>
+            <div class="grid-services">
+                <div class="service" onclick="openPaymentModal('Fund Transfer', 'Account No. / UPI ID')"><div class="s-icon">🏦</div><div class="s-name">Quick Transfer</div></div>
+                <div class="service" onclick="openPaymentModal('Fund Transfer', 'Account No. / UPI ID')"><div class="s-icon">➔</div><div class="s-name">Own/Other A/C</div></div>
+                <div class="service" onclick="openPaymentModal('Send Abroad', 'SWIFT / IBAN')"><div class="s-icon">🌐</div><div class="s-name">Send Abroad</div></div>
+                <div class="service" onclick="openPaymentModal('Schedule Transfer', 'Account No. / UPI ID')"><div class="s-icon">📅</div><div class="s-name">Schedule</div></div>
+            </div>
+
+            <!-- SECTION: RECHARGE & PAY BILLS -->
+            <div class="section-title">Recharge & Pay Bills</div>
+            <div class="grid-services">
+                <div class="service" onclick="openPaymentModal('Mobile Recharge', 'Mobile Number')"><div class="s-icon">📱</div><div class="s-name">Mobile</div></div>
+                <div class="service" onclick="openPaymentModal('DTH Recharge', 'Subscriber ID / Box No.')"><div class="s-icon">📺</div><div class="s-name">DTH</div></div>
+                <div class="service" onclick="openPaymentModal('Electricity Bill', 'Consumer Number')"><div class="s-icon">💡</div><div class="s-name">Electricity</div></div>
+                <div class="service" onclick="openPaymentModal('Credit Card Bill', 'Credit Card Number')"><div class="s-icon">💳</div><div class="s-name">Credit Card</div></div>
+                <div class="service" onclick="openPaymentModal('Broadband Bill', 'Account Number')"><div class="s-icon">🌐</div><div class="s-name">Broadband</div></div>
+                <div class="service" onclick="openPaymentModal('Water Bill', 'Consumer Number')"><div class="s-icon">💧</div><div class="s-name">Water</div></div>
+                <div class="service" onclick="openPaymentModal('Gas Bill', 'Customer ID')"><div class="s-icon">🔥</div><div class="s-name">Piped Gas</div></div>
+                <div class="service" onclick="openPaymentModal('Insurance Premium', 'Policy Number')"><div class="s-icon">🛡️</div><div class="s-name">Insurance</div></div>
+            </div>
+
+            <div class="section-title">UPI Payments</div>
+            <div class="grid-services">
+                <div class="service" onclick="openPaymentModal('Scan to Pay', 'Merchant Details')"><div class="s-icon">QR</div><div class="s-name">Scan to pay</div></div>
+                <div class="service" onclick="openPaymentModal('Pay Anyone', 'UPI ID')"><div class="s-icon">✈️</div><div class="s-name">Pay anyone</div></div>
+                <div class="service" onclick="openPaymentModal('Pay to Contact', 'Phone Number')"><div class="s-icon">📱</div><div class="s-name">Pay to contact</div></div>
+                <div class="service" onclick="openPaymentModal('Pay UPI ID', 'UPI ID')"><div class="s-icon">@</div><div class="s-name">UPI ID</div></div>
+            </div>
+
+            <div class="section-title">Recent Transactions</div>
+            <div class="tx-list" id="tx-container">
+                <div style="text-align:center; padding:20px; color:var(--text-muted);">Loading data...</div>
+            </div>
+        </div>
+
+        <!-- TAB 2: LOANS (EDITABLE) -->
+        <div id="tab-loans" class="tab-content">
+            <div class="loans-desktop-grid">
+                <div class="loan-summary-grid">
+                    <div class="loan-summary-box">
+                        <div class="editable-amt" contenteditable="true" onblur="formatCurrency(this)">₹ 12,50,000</div>
+                        <div class="loan-sub-label">Next EMI</div>
+                        <div class="loan-sub-val">₹ 24,500</div>
+                        <div class="edit-hint">✏️ Click to edit</div>
+                    </div>
+                    <div class="loan-summary-box">
+                        <div class="editable-amt" contenteditable="true" onblur="formatCurrency(this)">₹ 9,25,000</div>
+                        <div class="loan-sub-label">Due Date</div>
+                        <div class="loan-sub-val">15 Jul 2026</div>
+                        <div class="edit-hint">✏️ Click to edit</div>
+                    </div>
+                    <div class="loan-summary-box">
+                        <div class="editable-amt" contenteditable="true" onblur="formatCurrency(this)">₹ 3,25,000</div>
+                        <div class="loan-sub-label">Principal Paid</div>
+                        <div class="loan-sub-val">26% Completed</div>
+                        <div class="edit-hint">✏️ Click to edit</div>
+                    </div>
+                    <div class="loan-summary-box">
+                        <div class="editable-amt" contenteditable="true">48 Months</div>
+                        <div class="loan-sub-label">Remaining Tenure</div>
+                        <div class="loan-sub-val">Ends Jul 2030</div>
+                        <div class="edit-hint">✏️ Click text to edit</div>
+                    </div>
+                </div>
+
+                <div class="calc-box">
+                    <h3>Loan Calculator</h3>
+                    <p>Calculate your monthly EMI</p>
+                    <div class="calc-input-group">
+                        <label>Loan Amount (₹)</label>
+                        <input type="number" id="calc-amt" value="500000">
+                    </div>
+                    <div class="calc-input-group">
+                        <label>Interest Rate (% p.a)</label>
+                        <input type="number" step="0.1" id="calc-rate" value="9.5">
+                    </div>
+                    <div class="calc-input-group">
+                        <label>Loan Tenure (Years)</label>
+                        <input type="number" id="calc-tenure" value="5">
+                    </div>
+                    <button class="btn-calc" onclick="calculateEMI()">Calculate EMI</button>
+                    <div class="calc-result-grid">
+                        <div class="calc-result-box">
+                            <div class="label">Monthly EMI</div>
+                            <div class="value" id="res-emi">₹ 10,500.95</div>
+                        </div>
+                        <div class="calc-result-box" style="text-align: right;">
+                            <div class="label">Total Interest</div>
+                            <div class="value" id="res-int">₹ 1,30,057.00</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 3: FAQ (AI Chat) -->
+        <div id="tab-faq" class="tab-content">
+            <button class="btn-topics-open" onclick="document.getElementById('topics-modal').classList.add('active')">
+                <span>📋</span> Browse Banking Topics
+            </button>
+            
+            <div class="chat-wrapper">
+                <div class="chat-history" id="chat-history">
+                    <div class="msg-row bot">
+                        <div class="bot-avatar">🤖</div>
+                        <div class="msg-bubble">Hello! I'm your Fundify AI Assistant. How can I help you manage your finances today?</div>
+                    </div>
+                </div>
+                
+                <div class="chat-controls">
+                    <div class="chat-input-area">
+                        <input type="text" id="chat-input" placeholder="Type your financial question..." autocomplete="off">
+                        <button class="btn-send" onclick="sendManualChat()">➔</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: REWARDS (UPDATED COUPONS) -->
+        <div id="tab-rewards" class="tab-content">
+            <div class="section-title">Your Cashback & Rewards</div>
+            <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                
+                <div class="bank-card" style="flex: 1; min-width:200px; text-align: center; background: linear-gradient(135deg, #f6d365, #fda085); cursor:pointer;" onclick="openContentModal('Scratch Card', '<h2>Congratulations!</h2><br>You just scratched and won <b>₹50 Cashback</b> on your last UPI transfer. The amount will be credited to your Savings Account within 24 hours.')">
+                    <h1 style="font-size:40px; margin-bottom: 10px;">🎁</h1>
+                    <h3>Scratch Card</h3>
+                </div>
+                
+                <div class="bank-card" style="flex: 1; min-width:200px; text-align: center; background: linear-gradient(135deg, #84fab0, #8fd3f4); cursor:pointer;" onclick="openContentModal('Food Voucher', '<h2>Swiggy 20% OFF</h2><br>Apply code <b>FUNDIFYEATS20</b> at checkout on Swiggy to get 20% off up to ₹150 on your next order. Valid for the next 7 days.')">
+                    <h1 style="font-size:40px; margin-bottom: 10px;">🍔</h1>
+                    <h3>Food Voucher</h3>
+                </div>
+
+                <!-- 3 New Coupons -->
+                <div class="bank-card" style="flex: 1; min-width:200px; text-align: center; background: linear-gradient(135deg, #a18cd1, #fbc2eb); cursor:pointer;" onclick="openContentModal('Flight Discount', '<h2>Flat 15% OFF Flights</h2><br>Travel made easier! Get a flat 15% discount on all domestic flight bookings through Fundify Travels.<br><br><b>Promo Code: FLYFUND15</b>')">
+                    <h1 style="font-size:40px; margin-bottom: 10px;">✈️</h1>
+                    <h3>Flight Discount</h3>
+                </div>
+
+                <div class="bank-card" style="flex: 1; min-width:200px; text-align: center; background: linear-gradient(135deg, #ff9a9e, #fecfef); cursor:pointer;" onclick="openContentModal('Movie Tickets', '<h2>Buy 1 Get 1 FREE</h2><br>Grab your popcorn! Book one movie ticket on BookMyShow using your Fundify Credit Card and get the second ticket absolutely free for weekend shows.')">
+                    <h1 style="font-size:40px; margin-bottom: 10px;">🎬</h1>
+                    <h3>Movie Tickets</h3>
+                </div>
+
+                <div class="bank-card" style="flex: 1; min-width:200px; text-align: center; background: linear-gradient(135deg, #4facfe, #00f2fe); cursor:pointer;" onclick="openContentModal('Amazon Voucher', '<h2>₹500 Amazon Voucher</h2><br>Redeem this gift card on your next Amazon India purchase.<br><br><b>Voucher Code: AMZN-FND-500-X7P2</b><br>Valid until December 31st.')">
+                    <h1 style="font-size:40px; margin-bottom: 10px;">🛍️</h1>
+                    <h3>Amazon Voucher</h3>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- TAB 5: ABOUT (UPDATED REPLACING XAND & ADDING MODALS) -->
+        <div id="tab-about" class="tab-content">
+            <div class="about-container">
+                
+                <!-- Replaced XAND Logo with Fundify -->
+                <div class="about-logo">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 600" style="width: 40px; height: 40px;">
+                        <defs>
+                            <linearGradient id="logo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:#002b49;stop-opacity:1" />
+                                <stop offset="100%" style="stop-color:#008ba3;stop-opacity:1" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M 140 100 C 280 100, 360 120, 380 160 L 320 160 C 300 140, 240 140, 200 140 L 200 200 L 280 200 L 280 240 L 200 240 L 200 320 C 200 390, 280 400, 340 350 L 360 380 C 260 450, 140 420, 140 320 Z" fill="url(#logo-grad)"/>
+                    </svg>
+                    <h2>FUND<span>IFY</span></h2>
+                </div>
+
+                <!-- Useful Links Section (Trigger Professional Modals) -->
+                <div class="about-section">
+                    <h3>Useful Links</h3>
+                    <ul class="about-links">
+                        <li onclick="openContentModal('Home', '<h3>Welcome Home!</h3><p>You are currently on the professional portal dashboard. Navigate through the main tabs to manage your banking, view loans, explore rewards, and use our AI Assistant.</p>')">Home</li>
+                        <li onclick="openContentModal('About Us', '<h3>About Fundify</h3><p>Fundify is a leading financial technology platform committed to providing seamless, secure, and smart banking solutions for professionals. Our mission is to democratize digital finance.</p>')">About us</li>
+                        <li onclick="openContentModal('Features', '<h3>Platform Features</h3><ul><li>Instant UPI & Bank Transfers</li><li>Dynamic Loan EMI Calculators</li><li>AI-Powered Chat Assistant</li><li>Reward Points & Vouchers</li><li>Advanced Security Encryptions</li></ul>')">Features</li>
+                        <li onclick="openContentModal('Blog', '<h3>Fundify Blog</h3><p>Check out our latest articles on market trends, investment strategies, and how to maximize your savings. <i>(Blog posts will load here in the live app)</i></p>')">Blog</li>
+                        <li onclick="openContentModal('Pricing', '<h3>Transparent Pricing</h3><p>Fundify basic accounts are 100% free with zero maintenance charges! Premium tiers for business accounts start at just ₹499/month, including dedicated support and advanced APIs.</p>')">Pricing</li>
+                    </ul>
+                </div>
+
+                <!-- Company Section (Trigger Professional Modals) -->
+                <div class="about-section">
+                    <h3>Company</h3>
+                    <ul class="about-links">
+                        <li onclick="openContentModal('Terms & Conditions', '<h3>Terms of Service</h3><p>By using Fundify, you agree to our standard banking terms. We reserve the right to monitor transactions for compliance. Please ensure all transfer details are accurate before executing payments.</p>')">Terms & Conditions</li>
+                        <li onclick="openContentModal('Privacy Policy', '<h3>Your Privacy Matters</h3><p>We use military-grade AES-256 encryption. We never sell your personal financial data to third-party advertisers. For complete details on how your data is processed, please refer to our full privacy document.</p>')">Privacy Policy</li>
+                        <li onclick="openContentModal('Cookie Preferences', '<h3>Cookie Settings</h3><p>We use essential cookies to keep your session active and secure. You can manage optional tracking cookies via your browser settings. Analytics cookies are currently <b>Disabled</b>.</p>')">Cookie Preferences</li>
+                    </ul>
+                </div>
+
+                <!-- Download Our App Section -->
+                <div class="about-section">
+                    <h3>Download Our App</h3>
+                    <div class="app-buttons">
+                        <button class="app-btn" onclick="openContentModal('App Store', 'Redirecting you to the Apple App Store to download the iOS version of Fundify...')">
+                            <!-- Apple Icon -->
+                            <svg viewBox="0 0 384 512"><path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z"/></svg>
+                            App Store
+                        </button>
+                        <button class="app-btn" onclick="openContentModal('Google Play', 'Redirecting you to the Google Play Store to download the Android version of Fundify...')">
+                            <!-- Google Play Icon -->
+                            <svg viewBox="0 0 512 512"><path d="M325.3 234.3L104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6l-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z"/></svg>
+                            Google Play
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Follow Us Section -->
+                <div class="about-section">
+                    <h3>Follow us</h3>
+                    <div class="social-icons">
+                        <div class="social-icon fb" onclick="openContentModal('Facebook', 'Opening the official Fundify Facebook Page in a new tab.')">
+                            <svg viewBox="0 0 320 512"><path d="M279.14 288l14.22-92.66h-88.91v-60.13c0-25.35 12.42-50.06 52.24-50.06h40.42V6.26S260.43 0 225.36 0c-73.22 0-121.08 44.38-121.08 124.72v70.62H22.89V288h81.39v224h100.17V288z"/></svg>
+                        </div>
+                        <div class="social-icon" onclick="openContentModal('Instagram', 'Opening the official Fundify Instagram Profile in a new tab.')">
+                            <svg viewBox="0 0 448 512"><path d="M224.1 141c-63.6 0-114.9 51.3-114.9 114.9s51.3 114.9 114.9 114.9S339 319.5 339 255.9 287.7 141 224.1 141zm0 189.6c-41.1 0-74.7-33.5-74.7-74.7s33.5-74.7 74.7-74.7 74.7 33.5 74.7 74.7-33.6 74.7-74.7 74.7zm146.4-194.3c0 14.9-12 26.8-26.8 26.8-14.9 0-26.8-12-26.8-26.8s12-26.8 26.8-26.8 26.8 12 26.8 26.8zm76.1 27.2c-1.7-35.9-9.9-67.7-36.2-93.9-26.2-26.2-58-34.4-93.9-36.2-37-2.1-147.9-2.1-184.9 0-35.8 1.7-67.6 9.9-93.9 36.1s-34.4 58-36.2 93.9c-2.1 37-2.1 147.9 0 184.9 1.7 35.9 9.9 67.7 36.2 93.9s58 34.4 93.9 36.2c37 2.1 147.9 2.1 184.9 0 35.9-1.7 67.7-9.9 93.9-36.2 26.2-26.2 34.4-58 36.2-93.9 2.1-37 2.1-147.8 0-184.8zM398.8 388c-7.8 19.6-22.9 34.7-42.6 42.6-29.5 11.7-99.5 9-132.1 9s-102.7 2.6-132.1-9c-19.6-7.8-34.7-22.9-42.6-42.6-11.7-29.5-9-99.5-9-132.1s-2.6-102.7 9-132.1c7.8-19.6 22.9-34.7 42.6-42.6 29.5-11.7 99.5-9 132.1-9s102.7-2.6 132.1 9c19.6 7.8 34.7 22.9 42.6 42.6 11.7 29.5 9 99.5 9 132.1s2.7 102.7-9 132.1z"/></svg>
+                        </div>
+                        <div class="social-icon" onclick="openContentModal('Twitter', 'Opening the official Fundify Twitter handle in a new tab.')">
+                            <svg viewBox="0 0 512 512"><path d="M459.37 151.716c.325 4.548.325 9.097.325 13.645 0 138.72-105.583 298.558-298.558 298.558-59.452 0-114.68-17.219-161.137-47.106 8.447.974 16.568 1.299 25.34 1.299 49.055 0 94.213-16.568 130.274-44.832-46.132-.975-84.792-31.188-98.112-72.772 6.498.974 12.995 1.624 19.818 1.624 9.421 0 18.843-1.3 27.614-3.573-48.081-9.747-84.143-51.98-84.143-102.985v-1.299c13.969 7.792 30.214 12.67 47.431 13.319-28.264-18.843-46.781-51.005-46.781-87.391 0-19.492 5.197-37.36 14.294-52.954 51.655 63.675 129.3 105.258 216.365 109.807-1.624-7.792-2.599-15.918-2.599-24.04 0-57.828 46.782-104.934 104.934-104.934 30.213 0 57.502 12.67 76.67 33.137 23.715-4.548 46.456-13.32 66.599-25.34-7.798 24.366-24.366 44.833-46.132 57.827 21.117-2.273 41.584-8.122 60.426-16.243-14.292 20.791-32.161 39.308-52.628 54.253z"/></svg>
+                        </div>
+                        <div class="social-icon" onclick="openContentModal('LinkedIn', 'Opening the official Fundify LinkedIn Company Page in a new tab.')">
+                            <svg viewBox="0 0 448 512"><path d="M100.28 448H7.4V148.9h92.88zM53.79 108.1C24.09 108.1 0 83.5 0 53.8a53.79 53.79 0 0 1 107.58 0c0 29.7-24.1 54.3-53.79 54.3zM447.9 448h-92.68V302.4c0-34.7-.7-79.2-48.29-79.2-48.29 0-55.69 37.7-55.69 76.7V448h-92.78V148.9h89.08v40.8h1.3c12.4-23.5 42.69-48.3 87.88-48.3 94 0 111.28 61.9 111.28 142.3V448z"/></svg>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ================= MODALS ================= -->
+    
+    <!-- NEW: Professional Content Modal -->
+    <div class="modal-overlay" id="content-modal">
+        <div class="modal-content" style="max-width: 500px; width: 92%;">
+            <div class="modal-header">
+                <div class="modal-title" id="content-modal-title" style="text-align: left; font-size: 20px; color: var(--sea-blue);">Information</div>
+                <button class="close-btn" onclick="closeModals()">×</button>
+            </div>
+            <div id="content-modal-body" style="color: var(--text-main); line-height: 1.6; font-size: 15px; padding-bottom: 10px;">
+                <!-- Content gets injected dynamically here via JS -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Topics Modal -->
+    <div class="modal-overlay" id="topics-modal">
+        <div class="modal-content" style="padding: 15px 25px;">
+            <div class="modal-header" style="margin-bottom: 5px;">
+                <div class="modal-title">Banking Topics</div>
+                <button class="close-btn" onclick="closeModals()">×</button>
+            </div>
+            <div class="topics-list">
+                <div class="topic-item" onclick="selectTopic('Block Card')"><span class="hash">#</span> Block Card</div>
+                <div class="topic-item" onclick="selectTopic('Check Balance')"><span class="hash">#</span> Check Balance</div>
+                <div class="topic-item" onclick="selectTopic('Loan Rates')"><span class="hash">#</span> Loan Rates</div>
+                <div class="topic-item" onclick="selectTopic('Transfer Limits')"><span class="hash">#</span> Transfer Limits</div>
+                <div class="topic-item" onclick="selectTopic('Download Statement')"><span class="hash">#</span> Download Statement</div>
+                <div class="topic-item" onclick="selectTopic('FD Rates')"><span class="hash">#</span> FD Rates</div>
+                <div class="topic-item" onclick="selectTopic('Reset UPI PIN')"><span class="hash">#</span> Reset UPI PIN</div>
+                <div class="topic-item" onclick="selectTopic('Customer Care')"><span class="hash">#</span> Customer Care</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Universal Payment/Transfer Form Modal -->
+    <div class="modal-overlay" id="transfer-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modal-main-title">Send Money</div>
+                <button class="close-btn" onclick="closeModals()">×</button>
+            </div>
+            <input type="text" id="t-name" class="form-input" placeholder="Recipient / Remarks (Optional)">
+            <input type="text" id="t-upi" class="form-input" placeholder="UPI ID / Phone No.">
+            <input type="number" id="t-amount" class="form-input" placeholder="Amount (₹)" style="font-size:20px; font-weight:bold;">
+            <button class="btn-login" onclick="validateAndOpenPin()">Proceed to Pay</button>
+        </div>
+    </div>
+
+    <!-- PIN Modal -->
+    <div class="modal-overlay" id="pin-modal">
+        <div class="modal-content" style="text-align: center;">
+            <div class="modal-header">
+                <div class="modal-title" style="text-align: center; width: 100%;">Enter 4-Digit UPI PIN</div>
+                <button class="close-btn" onclick="closeModals()" style="position: absolute; right: 20px;">×</button>
+            </div>
+            <div class="pin-dots" id="pin-dots">
+                <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div>
+            </div>
+            <div class="numpad">
+                <button class="num-btn" onclick="enterPin(1)">1</button><button class="num-btn" onclick="enterPin(2)">2</button><button class="num-btn" onclick="enterPin(3)">3</button>
+                <button class="num-btn" onclick="enterPin(4)">4</button><button class="num-btn" onclick="enterPin(5)">5</button><button class="num-btn" onclick="enterPin(6)">6</button>
+                <button class="num-btn" onclick="enterPin(7)">7</button><button class="num-btn" onclick="enterPin(8)">8</button><button class="num-btn" onclick="enterPin(9)">9</button>
+                <button class="num-btn" style="color:var(--danger);" onclick="clearPin()">C</button><button class="num-btn" onclick="enterPin(0)">0</button><button class="num-btn" style="color:var(--success);" onclick="submitPin()">✓</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">Success!</div>
+
+    <!-- ================= JAVASCRIPT ================= -->
+    <script>
+        // --- 0. Dark Mode Toggle ---
+        function toggleTheme() {
+            document.body.classList.toggle('dark-mode');
+            const btn = document.getElementById('theme-toggle');
+            btn.innerText = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
+        }
+
+        // --- 1. Login Background (Floating Symbols) ---
+        function generateSymbols() {
+            const container = document.getElementById('symbol-container');
+            const symbols = ['₹', '$', '€', '£', '¥', '🏦', '💳', '%'];
+            for(let i=0; i<25; i++) {
+                let el = document.createElement('div');
+                el.className = 'symbol-bg';
+                el.innerText = symbols[Math.floor(Math.random() * symbols.length)];
+                el.style.left = Math.random() * 100 + 'vw';
+                el.style.animationDuration = (Math.random() * 10 + 10) + 's';
+                el.style.animationDelay = (Math.random() * 5) + 's';
+                el.style.fontSize = (Math.random() * 2 + 1.5) + 'rem';
+                container.appendChild(el);
+            }
+        }
+        generateSymbols();
+
+        // --- 2. Login Logic & Enter Key Listener ---
+        let actualBalance = 0;
+        let isBalanceVisible = false;
+
+        document.getElementById('password').addEventListener('keyup', function(e) { if(e.key === 'Enter') processLogin(); });
+        document.getElementById('username').addEventListener('keyup', function(e) { if(e.key === 'Enter') processLogin(); });
+        document.getElementById('chat-input').addEventListener('keyup', function(e) { if(e.key === 'Enter') sendManualChat(); });
+
+        async function processLogin() {
+            const user = document.getElementById('username').value;
+            const pass = document.getElementById('password').value;
+            
+            try {
+                const response = await fetch('/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user, password: pass }) });
+                const data = await response.json();
+                if(data.success) { actualBalance = data.balance; showDashboard(); } 
+                else { document.getElementById('login-error').style.display = 'block'; }
+            } catch (e) {
+                if(user === 'admin' && pass === 'admin123') { actualBalance = 150500.75; showDashboard(true); } 
+                else { document.getElementById('login-error').style.display = 'block'; }
+            }
+        }
+
+        function showDashboard(isFallback = false) {
+            document.getElementById('login-view').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('login-view').style.display = 'none';
+                document.getElementById('dashboard-view').style.display = 'block';
+                if(isFallback) {
+                    document.getElementById('tx-container').innerHTML = `
+                        <div class="tx-item"><div class="tx-left"><span class="tx-name">Amazon India</span><span class="tx-date">Today, 2:30 PM</span></div><span class="tx-amt">-₹ 1,499.00</span></div>
+                        <div class="tx-item"><div class="tx-left"><span class="tx-name">Rahul Sharma</span><span class="tx-date">Yesterday</span></div><span class="tx-amt">-₹ 2,500.00</span></div>
+                    `;
+                } else { fetchTransactions(); }
+            }, 500);
+        }
+
+        function logout() { location.reload(); }
+
+        // --- 3. UI Navigation & Toggles ---
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            event.target.classList.add('active');
+            document.getElementById('tab-' + tabId).classList.add('active');
+        }
+
+        function toggleBalance() {
+            isBalanceVisible = !isBalanceVisible;
+            const display = document.getElementById('balance-display');
+            if(isBalanceVisible) {
+                display.innerText = `₹ ${actualBalance.toLocaleString('en-IN', {minimumFractionDigits: 2})}`;
+                document.getElementById('eye-icon').innerHTML = '<path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>';
+            } else {
+                display.innerText = '₹ XX,XXX.XX';
+                document.getElementById('eye-icon').innerHTML = '<path d="M12 7c2.76 0 5 2.24 5 5 0 .65-.13 1.26-.36 1.83l2.92 2.92c1.51-1.26 2.7-2.89 3.43-4.75-1.73-4.39-6-7.5-11-7.5-1.4 0-2.74.25-3.98.7l2.16 2.16C10.74 7.13 11.35 7 12 7zM2 4.27l2.28 2.28.46.46C3.08 8.3 1.78 10.02 1 12c1.73 4.39 6 7.5 11 7.5 1.55 0 3.03-.3 4.38-.84l.42.42L19.73 22 21 20.73 3.27 3 2 4.27zM7.53 9.8l1.55 1.55c-.05.21-.08.43-.08.65 0 1.66 1.34 3 3 3 .22 0 .44-.03.65-.08l1.55 1.55c-.67.33-1.41.53-2.2.53-2.76 0-5-2.24-5-5 0-.79.2-1.53.53-2.2zm4.31-.78l3.15 3.15.02-.16c0-1.66-1.34-3-3-3l-.17.01z"/>';
+            }
+        }
+
+        // --- 4. LOAN EDITING & EMI CALCULATOR ---
+        function formatCurrency(element) {
+            let rawText = element.innerText.replace(/[^0-9.]/g, '');
+            if(!rawText) { element.innerText = '₹ 0'; return; }
+            element.innerText = '₹ ' + parseFloat(rawText).toLocaleString('en-IN');
+            openToast("Value updated successfully!");
+        }
+
+        function calculateEMI() {
+            let p = parseFloat(document.getElementById('calc-amt').value);
+            let r = parseFloat(document.getElementById('calc-rate').value) / 12 / 100;
+            let n = parseFloat(document.getElementById('calc-tenure').value) * 12;
+            if(!p || !r || !n) return;
+            let emi = p * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+            document.getElementById('res-emi').innerText = '₹ ' + emi.toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+            document.getElementById('res-int').innerText = '₹ ' + ((emi * n) - p).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        }
+
+        // --- 5. FAQ AI CHATBOT & TOPICS MODAL ---
+        function sendManualChat() {
+            const input = document.getElementById('chat-input');
+            const msg = input.value.trim();
+            if(msg) { sendChatMsg(msg); input.value = ''; }
+        }
+
+        function selectTopic(topic) {
+            closeModals();
+            sendChatMsg(`I need information about: ${topic}`);
+        }
+
+        function sendChatMsg(msg) {
+            const history = document.getElementById('chat-history');
+            history.innerHTML += `<div class="msg-row user"><div class="msg-bubble">${msg}</div></div>`;
+            history.scrollTop = history.scrollHeight;
+
+            setTimeout(() => {
+                let reply = `Here is the information regarding "${msg}". Is there anything else you need?`;
+                if(msg.includes("spending")) reply = "You've spent ₹12,540 this month. Most of it was on Shopping (40%) and Dining (30%).";
+                if(msg.includes("loan")) reply = "Based on your active history, you are pre-approved for a Personal Loan up to ₹5,00,000.";
+                if(msg.includes("Block Card")) reply = "To block your card, please go to Banking > Card Services > Block Card, or call 1800-111-2222 immediately.";
+                if(msg.includes("Reset UPI PIN")) reply = "To reset your UPI PIN, click on 'Forgot UPI PIN' under the UPI Payments section. You will need your debit card details.";
+
+                history.innerHTML += `<div class="msg-row bot"><div class="bot-avatar">🤖</div><div class="msg-bubble">${reply}</div></div>`;
+                history.scrollTop = history.scrollHeight;
+            }, 1000);
+        }
+
+        // --- 6. TRANSACTIONS, BILLS, & MODALS ---
+        let currentPin = "";
+        let pendingData = {};
+
+        // NEW: Professional Content Modal Trigger
+        function openContentModal(title, htmlContent) {
+            document.getElementById('content-modal-title').innerText = title;
+            document.getElementById('content-modal-body').innerHTML = htmlContent;
+            document.getElementById('content-modal').classList.add('active');
+        }
+
+        function openPaymentModal(title, placeholder) {
+            document.getElementById('modal-main-title').innerText = title || "Send Money";
+            document.getElementById('t-upi').placeholder = placeholder || "UPI ID / Phone No.";
+            document.getElementById('t-name').value = '';
+            document.getElementById('t-upi').value = '';
+            document.getElementById('t-amount').value = '';
+            document.getElementById('transfer-modal').classList.add('active');
+        }
+
+        function closeModals() {
+            document.getElementById('transfer-modal').classList.remove('active');
+            document.getElementById('pin-modal').classList.remove('active');
+            document.getElementById('topics-modal').classList.remove('active');
+            document.getElementById('content-modal').classList.remove('active'); // Hides the new content modal
+            clearPin();
+        }
+
+        function validateAndOpenPin() {
+            pendingData = {
+                name: document.getElementById('t-name').value || document.getElementById('modal-main-title').innerText,
+                upi: document.getElementById('t-upi').value,
+                amount: parseFloat(document.getElementById('t-amount').value)
+            };
+
+            if(!pendingData.amount || pendingData.amount <= 0) { openToast('Please enter a valid amount.', true); return; }
+            if(pendingData.amount > actualBalance) { openToast('Insufficient Balance!', true); return; }
+
+            document.getElementById('transfer-modal').classList.remove('active');
+            document.getElementById('pin-modal').classList.add('active');
+        }
+
+        function enterPin(num) { if(currentPin.length < 4) { currentPin += num; updateDots(); } }
+        function clearPin() { currentPin = ""; updateDots(); }
+        function updateDots() {
+            const dots = document.getElementById('pin-dots').children;
+            for(let i=0; i<4; i++) {
+                if(i < currentPin.length) dots[i].classList.add('active');
+                else dots[i].classList.remove('active');
+            }
+        }
+
+        async function submitPin() {
+            if(currentPin.length !== 4) return;
+            closeModals();
+            
+            try {
+                const res = await fetch('/api/transactions', {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: pendingData.name, phone: pendingData.upi, upi: pendingData.upi, amount: pendingData.amount })
+                });
+                if(!res.ok) throw new Error("API failed");
+                updateLocalBalance(); fetchTransactions(); 
+            } catch (e) {
+                updateLocalBalance();
+                const txContainer = document.getElementById('tx-container');
+                const newTx = `<div class="tx-item"><div class="tx-left"><span class="tx-name">${pendingData.name}</span><span class="tx-date">Just Now</span></div><span class="tx-amt">-₹ ${pendingData.amount.toFixed(2)}</span></div>`;
+                txContainer.insertAdjacentHTML('afterbegin', newTx);
+            }
+        }
+
+        function updateLocalBalance() {
+            actualBalance -= pendingData.amount;
+            if(isBalanceVisible) { isBalanceVisible = false; toggleBalance(); }
+            openToast(`₹${pendingData.amount} paid successfully!`);
+        }
+
+        async function fetchTransactions() {
+            try {
+                const response = await fetch('/api/transactions');
+                const data = await response.json();
+                const container = document.getElementById('tx-container');
+                container.innerHTML = '';
+                
+                data.forEach(tx => {
+                    container.innerHTML += `
+                        <div class="tx-item">
+                            <div class="tx-left">
+                                <span class="tx-name">${tx.recipient_name}</span>
+                                <span class="tx-date">${tx.timestamp}</span>
+                            </div>
+                            <span class="tx-amt">-₹ ${Math.abs(tx.amount).toFixed(2)}</span>
+                        </div>
+                    `;
+                });
+            } catch(e) { console.log("Running in static mode, API fetch skipped."); }
+        }
+
+        function openToast(msg, isError=false) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.style.background = isError ? 'var(--danger)' : 'var(--success)';
+            toast.style.display = 'block';
+            setTimeout(() => { toast.style.display = 'none'; }, 3000);
+        }
+    </script>
+</body>
+</html>
