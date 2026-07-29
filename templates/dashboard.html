@@ -886,18 +886,7 @@
 
     </div>
 
-    <!-- FLOATING ACTION BUTTON (FAB) -->
-    <div class="fab-container">
-        <div class="fab-menu">
-            <button class="fab-item" onclick="switchTab('faq')">💬 Quick Support</button>
-            <button class="fab-item" onclick="openPaymentModal('Scan to Pay', 'Merchant UPI ID')">📷 Scan QR</button>
-            <button class="fab-item" onclick="openPaymentModal('New Transfer', 'Account No. / UPI ID')">➔ New Transfer</button>
-        </div>
-        <button class="fab-main">✦</button>
-    </div>
-
-    <!-- ================= MODALS ================= -->
-    
+    <!-- MODALS -->
     <div class="modal-overlay" id="bg-modal">
         <div class="modal-content" style="max-width: 500px;">
             <div class="modal-header">
@@ -923,7 +912,6 @@
                 <button class="close-btn" onclick="closeModals()">×</button>
             </div>
             <div id="content-modal-body" style="color: var(--text-main); line-height: 1.6; font-size: 15px; font-weight: 500;">
-                <!-- Content injected dynamically via JS -->
             </div>
         </div>
     </div>
@@ -982,9 +970,7 @@
 
     <!-- ================= JAVASCRIPT ================= -->
     <script>
-        // --- 0. Custom Context Menu ---
         document.addEventListener('contextmenu', function(e) {
-            // Only show custom context menu inside the dashboard
             if(document.getElementById('dashboard-view').style.display === 'block') {
                 e.preventDefault();
                 const menu = document.getElementById('context-menu');
@@ -995,38 +981,26 @@
         });
         
         document.addEventListener('click', function(e) {
-            if(e.button !== 2) {
-                document.getElementById('context-menu').classList.remove('active');
-            }
+            if(e.button !== 2) { document.getElementById('context-menu').classList.remove('active'); }
         });
 
-        // --- 0. Background Image Engine ---
         function setBackground(url, element) {
             const bgLayer = document.getElementById('app-bg');
             const overlayLayer = document.getElementById('app-bg-overlay');
-            
             document.querySelectorAll('.bg-option').forEach(el => el.classList.remove('active'));
             if(element) element.classList.add('active');
-
-            if(url === 'none') {
-                bgLayer.style.backgroundImage = 'none';
-                overlayLayer.style.opacity = '1'; 
-            } else {
-                bgLayer.style.backgroundImage = url;
-                overlayLayer.style.opacity = '0.75'; 
-            }
+            if(url === 'none') { bgLayer.style.backgroundImage = 'none'; overlayLayer.style.opacity = '1'; } 
+            else { bgLayer.style.backgroundImage = url; overlayLayer.style.opacity = '0.75'; }
             closeModals();
             openToast('Dashboard background updated!');
         }
 
-        // --- 1. Dark Mode Toggle ---
         function toggleTheme() {
             document.body.classList.toggle('dark-mode');
             const btn = document.getElementById('theme-toggle');
             btn.innerText = document.body.classList.contains('dark-mode') ? '☀️' : '🌙';
         }
 
-        // --- 2. Login Background (Floating Symbols) ---
         function generateSymbols() {
             const container = document.getElementById('symbol-container');
             const symbols = ['₹', '$', '€', '£', '¥', '🏦', '💳', '%'];
@@ -1043,7 +1017,6 @@
         }
         generateSymbols();
 
-        // --- 3. Login Logic & Enter Key Listener ---
         let actualBalance = 0;
         let isBalanceVisible = false;
 
@@ -1055,12 +1028,6 @@
             const user = document.getElementById('username').value.trim();
             const pass = document.getElementById('password').value.trim();
             
-            if (user === 'admin' && pass === 'admin123') { 
-                actualBalance = 150500.75; 
-                showDashboard(true); 
-                return; 
-            }
-
             try {
                 const response = await fetch('/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: user, password: pass }) });
                 const data = await response.json();
@@ -1077,18 +1044,13 @@
             setTimeout(() => {
                 document.getElementById('login-view').style.display = 'none';
                 document.getElementById('dashboard-view').style.display = 'block';
-                
                 setTimeout(() => { document.getElementById('spend-bar').style.width = '22%'; }, 600);
-
-                if(isFallback) {
-                    fetchTransactions(); 
-                } else { fetchTransactions(); }
+                fetchTransactions(); 
             }, 500);
         }
 
         function logout() { location.reload(); }
 
-        // --- 4. UI Navigation & Toggles ---
         function switchTab(tabId) {
             document.querySelectorAll('.tab-btn').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -1108,7 +1070,6 @@
             }
         }
 
-        // --- 5. LOAN EDITING & EMI CALCULATOR ---
         function formatCurrency(element) {
             let rawText = element.innerText.replace(/[^0-9.]/g, '');
             if(!rawText) { element.innerText = '₹ 0'; return; }
@@ -1126,7 +1087,6 @@
             document.getElementById('res-int').innerText = '₹ ' + ((emi * n) - p).toLocaleString('en-IN', {minimumFractionDigits: 2, maximumFractionDigits: 2});
         }
 
-        // --- 6. FAQ AI CHATBOT & VOICE SIMULATION ---
         function sendManualChat() {
             const input = document.getElementById('chat-input');
             const msg = input.value.trim();
@@ -1143,7 +1103,6 @@
             btn.classList.add('listening');
             input.placeholder = "Listening...";
             
-            // Simulate voice dictation after 2 seconds
             setTimeout(() => {
                 isListening = false;
                 btn.classList.remove('listening');
@@ -1175,7 +1134,6 @@
             }, 1000);
         }
 
-        // --- 7. TRANSACTIONS, BILLS, & MODALS ---
         let currentPin = "";
         let pendingData = {};
 
